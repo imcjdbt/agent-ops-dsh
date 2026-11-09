@@ -1,0 +1,14 @@
+{
+    "AppVersion": "2.2.1.0",
+    "Title": "Agent OPS · DSH",
+    "Thumbnail": "lively_t.jpg",
+    "Preview": "",
+    "Desc": "agent-display OPS theme wired to your local DSH ledger: sessions, tokens, cache hits and spend, refreshed live. / agent-display 的 OPS 主题，接本机 DSH 真实账本，实时刷新。",
+    "Author": "imcjdbt",
+    "License": "PolyForm Noncommercial 1.0.0",
+    "Contact": "https://github.com/imcjdbt",
+    "Type": 1,
+    "FileName": "lively.html",
+    "Arguments": null,
+    "IsAbsolutePath": false
+}
