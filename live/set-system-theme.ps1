@@ -29,6 +29,13 @@ $pers = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
 Set-ItemProperty $pers -Name AppsUseLightTheme -Value $light -Type DWord
 Set-ItemProperty $pers -Name SystemUsesLightTheme -Value $light -Type DWord
 
+# Windows 的「自动从背景选择强调色」会周期性地把强调色改回它自己算的值，关掉它
+$desk = 'HKCU:\Control Panel\Desktop'
+try {
+  $auto = (Get-ItemProperty $desk -ErrorAction Stop).AutoColorization
+  if ($auto -ne 0) { Set-ItemProperty $desk -Name AutoColorization -Value 0 -Type DWord; "auto-colorization: $auto -> 0" }
+} catch { "auto-colorization: skip ($($_.Exception.Message.Split([Environment]::NewLine)[0]))" }
+
 $dwm = 'HKCU:\Software\Microsoft\Windows\DWM'
 Set-ItemProperty $dwm -Name AccentColor -Value $abgr -Type DWord
 Set-ItemProperty $dwm -Name AccentColorInactive -Value $abgr -Type DWord
@@ -36,6 +43,16 @@ Set-ItemProperty $dwm -Name ColorizationColor -Value $argb -Type DWord
 Set-ItemProperty $dwm -Name ColorizationAfterglow -Value $argb -Type DWord
 Set-ItemProperty $dwm -Name ColorPrevalence -Value 1 -Type DWord
 Set-ItemProperty $dwm -Name EnableWindowColorization -Value 1 -Type DWord
+
+# 开始菜单 / 部分系统界面读的是 Explorer\Accent 下的两个键
+$acc = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent'
+if (Test-Path $acc) {
+  try {
+    Set-ItemProperty $acc -Name AccentColorMenu -Value $abgr -Type DWord
+    Set-ItemProperty $acc -Name StartColorMenu  -Value $abgr -Type DWord
+    "accent menu: synced"
+  } catch { "accent menu: skip ($($_.Exception.Message.Split([Environment]::NewLine)[0]))" }
+}
 
 Add-Type -Namespace W -Name T -MemberDefinition @'
 [StructLayout(LayoutKind.Sequential)]
