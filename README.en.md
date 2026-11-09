@@ -11,6 +11,14 @@ Turns the **OPS** dashboard from [agent-display](https://github.com/cyberdaddyle
   <img src="screenshots/theme-colors.jpg" width="49%" alt="Custom colors">
 </p>
 
+**The same page in different palettes** (only two colors are set in the panel):
+
+<p align="center">
+  <img src="screenshots/paper-black.jpg" width="32%" alt="Paper: white on black text">
+  <img src="screenshots/paper-blue.jpg" width="32%" alt="White with sky-blue text">
+  <img src="screenshots/gray-black.jpg" width="32%" alt="Cool gray with black text">
+</p>
+
 ---
 
 ## Features

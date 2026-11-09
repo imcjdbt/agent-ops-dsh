@@ -11,6 +11,14 @@
   <img src="screenshots/theme-colors.jpg" width="49%" alt="自定义配色">
 </p>
 
+**同一套页面的不同配色**（配色面板里只调两个颜色即可）：
+
+<p align="center">
+  <img src="screenshots/paper-black.jpg" width="32%" alt="白底黑字（纸面原色）">
+  <img src="screenshots/paper-blue.jpg" width="32%" alt="白底天蓝字">
+  <img src="screenshots/gray-black.jpg" width="32%" alt="冷灰底黑字">
+</p>
+
 ---
 
 ## 特性
