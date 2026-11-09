@@ -23,6 +23,10 @@ foreach ($f in $include) {
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'live') | Out-Null
 Copy-Item (Join-Path $root 'live\*.mjs'), (Join-Path $root 'live\*.js'), (Join-Path $root 'live\*.vbs') (Join-Path $stage 'live') -Force
 
+# three.js runtime (NEURAL / FACTORY / NEBULA offline)
+$three = Join-Path $root 'live\three'
+if (Test-Path $three) { Copy-Item $three (Join-Path $stage 'live') -Recurse -Force } else { Write-Host 'WARN  live\three missing' -ForegroundColor Yellow }
+
 Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
 $size = [math]::Round((Get-Item $zip).Length / 1MB, 2)
 Write-Host "OK  $zip  ($size MB)" -ForegroundColor Green

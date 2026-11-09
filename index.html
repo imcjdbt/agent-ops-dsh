@@ -21338,7 +21338,7 @@ requestAnimationFrame(frame);
 (() => {
   'use strict';
   // 神经星环、机器人工厂、星核蜘蛛要用 three.js，切到它们时才去加载，不拖慢 OPS / SPIDER
-  const THREE_CDN = 'https://cdn.jsdelivr.net/npm/three@0.147.0/';
+  const THREE_CDN = 'live/three/';
   const THREE_DEPS = ['build/three.min.js', 'examples/js/shaders/CopyShader.js', 'examples/js/shaders/LuminosityHighPassShader.js',
     'examples/js/postprocessing/EffectComposer.js', 'examples/js/postprocessing/RenderPass.js', 'examples/js/postprocessing/ShaderPass.js',
     'examples/js/postprocessing/UnrealBloomPass.js'].map(p => THREE_CDN + p);
