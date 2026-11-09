@@ -1,0 +1,7 @@
+dist/
+live/live-data.js
+live/bridge.pid
+live/bridge.log
+*.zip
+.DS_Store
+Thumbs.db

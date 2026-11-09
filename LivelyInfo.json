@@ -1,0 +1,14 @@
+{
+    "AppVersion": "2.2.1.0",
+    "Title": "Agent OPS · DSH",
+    "Thumbnail": "lively_t.jpg",
+    "Preview": "",
+    "Desc": "agent-display 的 OPS 主题，接本机 DSH 真实账本：会话、token、缓存命中、花费实时刷新。",
+    "Author": "imcjdbt",
+    "License": "PolyForm Noncommercial 1.0.0",
+    "Contact": "https://github.com/imcjdbt",
+    "Type": 1,
+    "FileName": "lively.html",
+    "Arguments": null,
+    "IsAbsolutePath": false
+}
