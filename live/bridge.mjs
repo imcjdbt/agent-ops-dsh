@@ -6,6 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import zlib from 'node:zlib';
+import http from 'node:http';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -274,6 +276,78 @@ const bye = () => {
 process.on('SIGINT', bye);
 process.on('SIGTERM', bye);
 
+/* ---------- 系统配色：只在壁纸页面报告颜色变化时写一次，平时完全不动 ---------- */
+const SYS_PORT = Number(process.env.DSH_SYS_PORT || 38765);
+const SYS_SCRIPT = path.join(HERE, 'set-system-theme.ps1');
+let lastSys = { bg: '', ink: '' };
+
+function applySystemTheme(bg, ink) {
+  const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+    '-WindowStyle', 'Hidden', '-File', SYS_SCRIPT, '-Bg', bg, '-Ink', ink];
+  if (process.env.DSH_SYS_DRY === '1') args.push('-DryRun');
+  let p;
+  try {
+    p = spawn('powershell', args, { windowsHide: true });
+  } catch (e) {
+    log('系统配色无法启动：' + (e && e.message ? e.message : e));
+    return false;
+  }
+  let out = '';
+  const grab = d => { out = (out + d).slice(-400); };
+  p.stdout.on('data', grab);
+  p.stderr.on('data', grab);
+  p.on('error', e => log('系统配色失败：' + e.message));
+  p.on('close', code => log(`系统配色 ${code === 0 ? '已应用' : '失败(' + code + ')'} · bg ${bg} / ink ${ink}` + (code ? ' · ' + out.trim() : '')));
+  return true;
+}
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Cache-Control': 'no-store',
+};
+
+function startColorServer() {
+  const srv = http.createServer((req, res) => {
+    log('颜色请求 ' + req.method + ' ' + req.url + ' len=' + (req.headers['content-length'] || '?'));
+    if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
+    if (req.method !== 'POST' || req.url.split('?')[0] !== '/theme') {
+      res.writeHead(404, CORS); return res.end('{"ok":false}');
+    }
+    let buf = '';
+    req.on('data', d => { buf += d; if (buf.length > 4096) req.destroy(); });
+    req.on('end', () => {
+      try {
+        const j = JSON.parse(buf || '{}');
+        const bg = String(j.bg || '').toUpperCase(), ink = String(j.ink || '').toUpperCase();
+        if (!/^#[0-9A-F]{6}$/.test(bg) || !/^#[0-9A-F]{6}$/.test(ink)) {
+          res.writeHead(400, { ...CORS, 'Content-Type': 'application/json' });
+          return res.end('{"ok":false,"reason":"bad-color"}');
+        }
+        if (bg === lastSys.bg && ink === lastSys.ink) {
+          res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+          return res.end('{"ok":true,"skip":true}');
+        }
+        if (!applySystemTheme(bg, ink)) {
+          res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
+          return res.end('{"ok":false,"reason":"spawn"}');
+        }
+        lastSys = { bg, ink };
+        res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+        res.end('{"ok":true}');
+      } catch (e) {
+        log('颜色请求解析失败：' + (e && e.message));
+        res.writeHead(400, CORS); res.end('{"ok":false}');
+      }
+    });
+  });
+  srv.on('error', e => log('颜色接口启动失败：' + e.message));
+  srv.listen(SYS_PORT, '127.0.0.1', () => log('颜色接口 http://127.0.0.1:' + SYS_PORT + ' · 仅 /theme POST 会改系统配色'));
+  return srv;
+}
+
 log(`DSH LIVE bridge 启动 · 每 ${INTERVAL / 1000}s 刷新一次 · 输出 ${OUT_JS}`);
+startColorServer();
 tick();
 setInterval(tick, INTERVAL);

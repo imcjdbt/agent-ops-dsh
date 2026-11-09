@@ -3678,6 +3678,26 @@ const PAL_VARS = ['--bg','--band','--panel','--ink','--ink2','--mute','--hair','
 let cols = null;
 try { cols = JSON.parse(localStorage.getItem('agent-ops-colors') || 'null'); } catch (e) { cols = null; }
 if (cols && !(cols.bg && cols.ink)) cols = null;
+/* system palette sync: fires only when colors actually change */
+let sysArmed = false;
+setTimeout(() => { sysArmed = true; }, 3000);
+let sysNotifyTimer = 0;
+function notifySystemTheme(){
+  if (!sysArmed) return;
+  clearTimeout(sysNotifyTimer);
+  sysNotifyTimer = setTimeout(() => {
+    try {
+      const cs = getComputedStyle(root);
+      const bg = hxOf(cs.getPropertyValue('--bg')).toUpperCase();
+      const ink = hxOf(cs.getPropertyValue('--ink')).toUpperCase();
+      fetch('http://127.0.0.1:38765/theme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ bg, ink })
+      }).catch(() => {});
+    } catch (e) {}
+  }, 400);
+}
 function applyColors(c){
   const st = root.style;
   if (!c || !c.bg || !c.ink) { PAL_VARS.forEach(v => st.removeProperty(v)); return; }
@@ -3709,7 +3729,7 @@ function syncColors(){
   });
 }
 function commitColors(){
-  applyColors(cols); readTheme(); stageDirty = true; panelsNeed = true; syncColors(); pkPaint();
+  applyColors(cols); readTheme(); stageDirty = true; panelsNeed = true; syncColors(); pkPaint(); notifySystemTheme();
   try { if (cols && cols.bg && cols.ink) localStorage.setItem('agent-ops-colors', JSON.stringify({ bg: cols.bg, ink: cols.ink })); else localStorage.removeItem('agent-ops-colors'); } catch (e) {}
 }
 let pkField = 'ink', pkh = 200, pks = .4, pkv = .9;
@@ -4337,6 +4357,7 @@ themeBtn.addEventListener('click', () => {
   root.dataset.theme = next;
   try { localStorage.setItem('agent-ops-variant', next); } catch (e) {}
   if (!cols) setTimeout(syncColors, 0);
+  setTimeout(notifySystemTheme, 80);
 });
 function onTheme(){ readTheme(); stageDirty = true; panelsNeed = true; }
 new MutationObserver(onTheme).observe(root, {attributes: true, attributeFilter: ['data-theme']});

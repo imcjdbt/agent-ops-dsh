@@ -26,6 +26,7 @@ Turns the **OPS** dashboard from [agent-display](https://github.com/cyberdaddyle
 - **Real data**: session titles, tool-call stream, tokens, cache-hit rate, today's spend and account balance all come from the local ledgers under `%USERPROFILE%\.dsh`, refreshed every 5 seconds
 - **Three themes**: Particles (neon green) / Paper (light) / Ink (dark) — one button cycles through them and the choice is remembered
 - **Two-color palette**: pick only a background and a text color; the other 14 color variables are derived proportionally, so it stays legible no matter what
+- **Follows the system palette**: after a color change (or theme switch) the wallpaper background drives Windows light/dark mode and the text color becomes the system accent color — one current-user registry write per change, no tray app, no polling
 - **Zero overhead**: the data bridge runs windowless, offline, never calls a model, never spends a token — it only reads local files
 - **No layout changes**: every value is written into the existing cards and labels; no overlay was added
 
@@ -87,6 +88,7 @@ If a directory is missing the page shows zeros or an empty state instead of fail
 | --- | --- |
 | Theme button (top right) | Particles → Paper → Ink, stored in `localStorage` |
 | Color panel (top right) | Two pickers (background / text), hand-drawn so it works inside Lively's WebView2; the rest is derived. "Follow theme" restores defaults |
+| System follow | 400 ms after a change the page POSTs to `127.0.0.1:38765`; the bridge runs `live/set-system-theme.ps1` to write HKCU Personalize / DWM values |
 | `:host` block in `index.html` | The 16 color variables of all three themes, if you prefer hard-coding |
 | `mountOps()` | The data mapping logic — change the fields here |
 
@@ -105,6 +107,9 @@ Almost always a blocked navigation: Lively only loads files inside the wallpaper
 
 **Numbers are frozen / the HUD shows STALE**
 The bridge is not running. Double-click `%LOCALAPPDATA%\Lively Wallpaper\Library\wallpapers\agent-ops-dsh\live\start-bridge.vbs`. The `LEDGER SYNC` field turns `STALE` after 15 seconds without an update.
+
+**Colors changed but Windows theme did not**
+The bridge is not running, or it is an older build. Check that `live-data.js` keeps updating, restart `live\start-bridge.vbs`, then change a color again. Only edits made from the wallpaper page sync; editing `index.html` directly does not.
 
 **Buttons on the wallpaper do not respond**
 Lively forwards mouse input by default (`InputForward`). If it is off, open the same `index.html` in a browser, adjust there, and copy the `localStorage` value over.
@@ -141,5 +146,6 @@ Lively forwards mouse input by default (`InputForward`). If it is off, open the 
 └─ live/
    ├─ bridge.mjs         data bridge: reads .dsh every 5 s, writes live-data.js
    ├─ bind.js            page side: polls the data, reloads when index.html changes
-   └─ start-bridge.vbs   windowless launcher (used at logon)
+   ├─ start-bridge.vbs   windowless launcher (used at logon)
+   └─ set-system-theme.ps1  syncs Windows light/dark mode and accent color with the wallpaper
 ```

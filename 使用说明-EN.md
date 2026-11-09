@@ -31,6 +31,7 @@ Once installed, the top-right corner is interactive:
 
 - **Particles / Paper / Ink** — three themes, cycled by one button
 - **Palette** — pick only "background" and "text"; the other 14 color variables are derived proportionally
+- **Follow system** — after a color change, Windows light/dark mode and the accent color are set to match the wallpaper (one registry write per change; otherwise untouched)
 
 ---
 
@@ -73,6 +74,9 @@ Almost always a blocked navigation: Lively only loads files inside the wallpaper
 **Numbers are frozen**
 The bridge is not running. Double-click `%LOCALAPPDATA%\Lively Wallpaper\Library\wallpapers\agent-ops-dsh\live\start-bridge.vbs` to start it once manually; `LEDGER SYNC` in the top-right corner shows `STALE` when nothing has updated for over 15 seconds.
 
+**Colors changed but the Windows theme did not**
+The bridge is not running, or it is an older build. Restart `live\start-bridge.vbs` and change a color again.
+
 **Theme / palette clicks do nothing**
 Lively forwards mouse input to the wallpaper by default (`InputForward`). If that is off, open the same `index.html` in a browser, adjust there, and copy the `localStorage` value over — or edit the `:host` color variables in `index.html` directly.
 
@@ -107,5 +111,6 @@ AgentOPS-DSH/
 └─ live/
    ├─ bridge.mjs           data bridge (reads .dsh every 5 s, writes live-data.js)
    ├─ bind.js              page side: polls data; reloads when index.html changes
-   └─ start-bridge.vbs     windowless launcher (used at logon)
+   ├─ start-bridge.vbs     windowless launcher (used at logon)
+   └─ set-system-theme.ps1  syncs Windows light/dark mode and accent color
 ```

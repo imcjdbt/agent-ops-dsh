@@ -26,6 +26,7 @@
 - **接真实数据**：会话标题、工具调用流水、token、缓存命中率、今日花费、账户余额，全部来自 `%USERPROFILE%\.dsh` 下的本地账本与会话日志，每 5 秒刷新
 - **三套主题**：粒子（荧光绿）/ 纸面（白底墨字）/ 墨底（黑底米白），点一下循环切换，会记住
 - **两色配色**：只选「背景」和「文字」两个颜色，其余 14 个颜色变量按比例派生，怎么配都不花
+- **跟随系统配色**：改完颜色（或换主题）后，壁纸底色自动换算成 Windows 浅色/深色、文字色自动设成系统强调色；每次改色只写一次当前用户的注册表，不常驻、不轮询
 - **零打扰**：数据桥接无窗口静默运行，不联网、不调模型、不花 token，只读本地文件
 - **无布局改动**：所有数据都填在原有卡片/文字位里，不新增任何浮层
 
@@ -87,6 +88,7 @@ cd agent-ops-dsh
 | --- | --- |
 | 右上角主题按钮 | 粒子 → 纸面 → 墨底 循环，写入 `localStorage` |
 | 右上角「配色」 | 背景 / 文字两个取色器（自绘，不依赖系统对话框），其余变量自动派生；「跟随主题」一键还原 |
+| 自动跟随系统 | 改色后 400 ms 内 POST 到 127.0.0.1:38765，由桥接调用 live/set-system-theme.ps1 写入 HKCU 的 Personalize / DWM 键 |
 | `index.html` 的 `:host` 块 | 三套主题的 16 个颜色变量，想硬改直接改这里 |
 | `mountOps()` | 数据映射逻辑，想换字段从这里下手 |
 
@@ -105,6 +107,9 @@ Lively 没装或装在非默认位置。先装 Lively 再运行安装脚本。
 
 **数字不动 / 显示 STALE**
 桥接没在跑。双击 `%LOCALAPPDATA%\Lively Wallpaper\Library\wallpapers\agent-ops-dsh\live\start-bridge.vbs` 手动启动一次。HUD 上 `LEDGER SYNC` 超过 15 秒未更新会显示 `STALE`。
+
+**改了配色，但系统深浅/强调色没变**
+桥接没在跑，或者还在用旧版桥接。确认 live-data.js 在持续更新；重启一次 live\start-bridge.vbs，再在壁纸里改一次颜色。只有从壁纸页面改色才会同步，直接改 index.html 不会。
 
 **壁纸上的按钮点不动**
 Lively 默认转发鼠标事件（设置项 `InputForward`）。若被关掉，只能用浏览器打开同一份 `index.html` 调，然后手工同步 `localStorage`。
@@ -141,5 +146,6 @@ Lively 默认转发鼠标事件（设置项 `InputForward`）。若被关掉，�
 └─ live/
    ├─ bridge.mjs         数据桥接：每 5 秒读 .dsh，写 live-data.js
    ├─ bind.js            页面侧轮询 + index.html 变更自动重载
-   └─ start-bridge.vbs   无窗口启动器（开机自启用）
+   ├─ start-bridge.vbs   无窗口启动器（开机自启用）
+   └─ set-system-theme.ps1  把壁纸底色/文字色写成系统深浅模式与强调色
 ```

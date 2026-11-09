@@ -21,7 +21,7 @@ foreach ($f in $include) {
 }
 
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'live') | Out-Null
-Copy-Item (Join-Path $root 'live\*.mjs'), (Join-Path $root 'live\*.js'), (Join-Path $root 'live\*.vbs') (Join-Path $stage 'live') -Force
+Copy-Item (Join-Path $root 'live\*.mjs'), (Join-Path $root 'live\*.js'), (Join-Path $root 'live\*.vbs'), (Join-Path $root 'live\*.ps1') (Join-Path $stage 'live') -Force
 
 # three.js runtime (NEURAL / FACTORY / NEBULA offline)
 $three = Join-Path $root 'live\three'
