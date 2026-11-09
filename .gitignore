@@ -1,5 +1,6 @@
 dist/
 live/live-data.js
+live/colors.json
 live/bridge.pid
 live/bridge.log
 *.zip

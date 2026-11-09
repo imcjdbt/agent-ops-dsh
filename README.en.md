@@ -26,7 +26,8 @@ Turns the **OPS** dashboard from [agent-display](https://github.com/cyberdaddyle
 - **Real data**: session titles, tool-call stream, tokens, cache-hit rate, today's spend and account balance all come from the local ledgers under `%USERPROFILE%\.dsh`, refreshed every 5 seconds
 - **Three themes**: Particles (neon green) / Paper (light) / Ink (dark) — one button cycles through them and the choice is remembered
 - **Two-color palette**: pick only a background and a text color; the other 14 color variables are derived proportionally, so it stays legible no matter what
-- **Follows the system palette**: after a color change (or theme switch) the wallpaper background drives Windows light/dark mode and the text color becomes the system accent color — one current-user registry write per change, no tray app, no polling
+- **Follows the system palette (on confirm)**: picking colors only previews on the wallpaper; press **Apply to system** in the palette to drive Windows light/dark mode and the system accent color (Explorer restarts once to repaint, taskbar flashes 2–3 s)
+- **Colors persist**: custom colors and the theme variant are saved to `live/colors.json` and restored after any wallpaper reload
 - **Zero overhead**: the data bridge runs windowless, offline, never calls a model, never spends a token — it only reads local files
 - **No layout changes**: every value is written into the existing cards and labels; no overlay was added
 

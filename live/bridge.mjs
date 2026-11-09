@@ -281,10 +281,15 @@ const SYS_PORT = Number(process.env.DSH_SYS_PORT || 38765);
 const SYS_SCRIPT = path.join(HERE, 'set-system-theme.ps1');
 let lastSys = { bg: '', ink: '' };
 
+/* 配色落盘：壁纸重载会丢 localStorage，颜色以 live/colors.json 为准 */
+const COLORS_FILE = path.join(HERE, 'colors.json');
+let savedColors = null;
+try { savedColors = JSON.parse(fs.readFileSync(COLORS_FILE, 'utf8')); } catch (e) { savedColors = null; }
+
 function applySystemTheme(bg, ink) {
   const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
     '-WindowStyle', 'Hidden', '-File', SYS_SCRIPT, '-Bg', bg, '-Ink', ink];
-  if (process.env.DSH_SYS_DRY === '1') args.push('-DryRun');
+  if (process.env.DSH_SYS_DRY === '1') args.push('-DryRun'); else args.push('-Restart');
   let p;
   try {
     p = spawn('powershell', args, { windowsHide: true });
@@ -312,7 +317,29 @@ function startColorServer() {
   const srv = http.createServer((req, res) => {
     log('颜色请求 ' + req.method + ' ' + req.url + ' len=' + (req.headers['content-length'] || '?'));
     if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
-    if (req.method !== 'POST' || req.url.split('?')[0] !== '/theme') {
+    const p0 = req.url.split('?')[0];
+    if (req.method === 'GET' && p0 === '/colors') {
+      res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(savedColors || {}));
+    }
+    if (req.method === 'POST' && p0 === '/colors') {
+      let b = '';
+      req.on('data', d => { b += d; if (b.length > 4096) req.destroy(); });
+      req.on('end', () => {
+        let j = {};
+        try { j = JSON.parse(b || '{}'); } catch (e) { j = {}; }
+        const variant = ['dark', 'light', 'ink'].includes(j.variant) ? j.variant : (savedColors && savedColors.variant) || 'dark';
+        const bg = String(j.bg || '').toUpperCase(), ink = String(j.ink || '').toUpperCase();
+        const hasColors = /^#[0-9A-F]{6}$/.test(bg) && /^#[0-9A-F]{6}$/.test(ink);
+        if (j.reset === true || !hasColors) savedColors = { variant };
+        else savedColors = { variant, bg, ink };
+        try { fs.writeFileSync(COLORS_FILE, JSON.stringify(savedColors)); } catch (e) { log('配色保存失败：' + (e && e.message)); }
+        res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+        res.end('{"ok":true}');
+      });
+      return;
+    }
+    if (req.method !== 'POST' || p0 !== '/theme') {
       res.writeHead(404, CORS); return res.end('{"ok":false}');
     }
     let buf = '';

@@ -31,7 +31,7 @@ Once installed, the top-right corner is interactive:
 
 - **Particles / Paper / Ink** — three themes, cycled by one button
 - **Palette** — pick only "background" and "text"; the other 14 color variables are derived proportionally
-- **Follow system** — after a color change, Windows light/dark mode and the accent color are set to match the wallpaper (one registry write per change; otherwise untouched)
+- **Follow system (on confirm)** — picking colors only previews on the wallpaper; press **Apply to system** to set Windows light/dark mode and the accent color (Explorer restarts once to repaint, taskbar flashes 2–3 s). Colors and theme variant persist in live/colors.json
 
 ---
 
