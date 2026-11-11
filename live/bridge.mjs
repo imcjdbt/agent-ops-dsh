@@ -260,15 +260,8 @@ function tick() {
   }
 }
 
-/* 单实例守卫 */
+/* 单实例守卫：以端口占用为准（pid 会被系统复用，不能作为判据） */
 const LOCK = path.join(HERE, 'bridge.pid');
-try {
-  const pid = Number(fs.readFileSync(LOCK, 'utf8').trim());
-  if (pid && pid !== process.pid) {
-    try { process.kill(pid, 0); console.log('DSH LIVE bridge 已在运行，pid=' + pid); process.exit(0); } catch { /* 旧进程已死 */ }
-  }
-} catch { /* 没有锁文件 */ }
-fs.writeFileSync(LOCK, String(process.pid));
 const bye = () => {
   try { if (fs.readFileSync(LOCK, 'utf8').trim() === String(process.pid)) fs.unlinkSync(LOCK); } catch {}
   process.exit(0);
@@ -283,6 +276,23 @@ let lastSys = { bg: '', ink: '' };
 
 /* 配色落盘：壁纸重载会丢 localStorage，颜色以 live/colors.json 为准 */
 const COLORS_FILE = path.join(HERE, 'colors.json');
+const COLORS_JS = path.join(HERE, 'colors.js');
+const PAL_FILE = path.join(HERE, 'palettes.json');
+const PAL_MAX = 100;
+const PAL_OK = p => p && typeof p.name === 'string' && p.name.trim() && /^#[0-9A-Fa-f]{6}$/.test(p.bg) && /^#[0-9A-Fa-f]{6}$/.test(p.ink);
+let userPalettes = [];
+let removedPalettes = [];
+try {
+  const o = JSON.parse(fs.readFileSync(PAL_FILE, 'utf8'));
+  userPalettes = Array.isArray(o) ? o : (o && Array.isArray(o.palettes) ? o.palettes : []);
+  if (o && Array.isArray(o.removed)) removedPalettes = o.removed.filter(n => typeof n === 'string');
+} catch { userPalettes = []; }
+userPalettes = userPalettes.filter(PAL_OK).slice(0, PAL_MAX);
+function writeColorsFiles(obj){
+  const o = Object.assign({}, obj || {}, { palettes: userPalettes, removed: removedPalettes });
+  try { fs.writeFileSync(COLORS_FILE, JSON.stringify(o)); } catch (e) { log('配色保存失败：' + (e && e.message)); }
+  try { fs.writeFileSync(COLORS_JS, 'window.__DSH_COLORS__ = ' + JSON.stringify(o) + ';\n'); } catch (e) {}
+}
 let savedColors = null;
 try { savedColors = JSON.parse(fs.readFileSync(COLORS_FILE, 'utf8')); } catch (e) { savedColors = null; }
 
@@ -333,7 +343,26 @@ function startColorServer() {
         const hasColors = /^#[0-9A-F]{6}$/.test(bg) && /^#[0-9A-F]{6}$/.test(ink);
         if (j.reset === true || !hasColors) savedColors = { variant };
         else savedColors = { variant, bg, ink };
-        try { fs.writeFileSync(COLORS_FILE, JSON.stringify(savedColors)); } catch (e) { log('配色保存失败：' + (e && e.message)); }
+        writeColorsFiles(savedColors);
+        res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+        res.end('{"ok":true}');
+      });
+      return;
+    }
+    if (req.method === 'GET' && p0 === '/palettes') {
+      res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ palettes: userPalettes, removed: removedPalettes }));
+    }
+    if (req.method === 'POST' && p0 === '/palettes') {
+      let b2 = '';
+      req.on('data', d => { b2 += d; if (b2.length > 65536) req.destroy(); });
+      req.on('end', () => {
+        let list = [], rm = null;
+        try { const j = JSON.parse(b2 || '{}'); list = Array.isArray(j) ? j : (j.palettes || []); if (j && Array.isArray(j.removed)) rm = j.removed; } catch (e) { list = []; }
+        userPalettes = (Array.isArray(list) ? list : []).filter(PAL_OK).slice(0, PAL_MAX);
+        if (rm) removedPalettes = rm.filter(n => typeof n === 'string').slice(0, 200);
+        try { fs.writeFileSync(PAL_FILE, JSON.stringify({ palettes: userPalettes, removed: removedPalettes })); } catch (e) { log('配色列表保存失败：' + (e && e.message)); }
+        writeColorsFiles(savedColors || {});
         res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
         res.end('{"ok":true}');
       });
@@ -369,8 +398,14 @@ function startColorServer() {
       }
     });
   });
-  srv.on('error', e => log('颜色接口启动失败：' + e.message));
-  srv.listen(SYS_PORT, '127.0.0.1', () => log('颜色接口 http://127.0.0.1:' + SYS_PORT + ' · 仅 /theme POST 会改系统配色'));
+  srv.on('error', e => {
+    if (e && e.code === 'EADDRINUSE') { log('DSH LIVE bridge 已在运行（端口 ' + SYS_PORT + ' 被占用），本实例退出'); process.exit(0); }
+    log('颜色接口启动失败：' + (e && e.message));
+  });
+  srv.listen(SYS_PORT, '127.0.0.1', () => {
+    try { fs.writeFileSync(LOCK, String(process.pid)); } catch {}
+    log('颜色接口 http://127.0.0.1:' + SYS_PORT + ' · 仅 /theme POST 会改系统配色');
+  });
   return srv;
 }
 

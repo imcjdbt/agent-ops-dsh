@@ -6,6 +6,7 @@
   非商业用途可免费使用；商业使用需另行获得授权，联系 cyberdaddyleo@outlook.com。许可证全文见仓库 LICENSE 文件或 https://polyformproject.org/licenses/noncommercial/1.0.0
 -->
 <html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<script src="live/colors.js"></script>
 <script src="live/live-data.js"></script>
 <script src="live/bind.js"></script>
 <title>Agent 战术大屏</title>
@@ -248,6 +249,15 @@ body{background:var(--page);overflow:hidden}
 .palette button:hover{color:var(--ink);border-color:var(--ink2)}
 .palette .papply{margin-top:2px;padding-top:7px;border-top:1px solid var(--hair2)}
 .palette .papply #palPush{color:var(--ink);border-color:var(--ink2);padding:3px 8px}
+.palette .pchips{margin-top:4px;align-items:center}
+.palette .pch{display:flex;gap:4px;flex-wrap:wrap;flex:1;min-height:16px;justify-content:flex-end;max-height:64px;overflow-y:auto;padding:7px 8px 3px 2px}
+.palette .pch .pchip{position:relative;display:inline-flex}
+.palette .pch .swatch{width:24px;height:16px;padding:0;border-radius:3px;border:1px solid var(--hair);cursor:pointer;background:linear-gradient(90deg,var(--cb,#000) 0 50%,var(--ci,#fff) 50% 100%)}
+.palette .pch .swatch[aria-pressed="true"]{outline:1px solid var(--ink2)}
+.palette .pch .pdel{position:absolute;top:-6px;right:-6px;width:13px;height:13px;padding:0;border-radius:50%;border:1px solid var(--ink2);background:var(--bg);color:var(--ink);font-size:10px;line-height:1;display:none;align-items:center;justify-content:center;cursor:pointer;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.palette .pch .pchip:hover .pdel,.palette .pch .pchip:focus-within .pdel{display:flex}
+.palette .pch .pdel:hover{background:var(--ink);color:var(--bg)}
+.palette .psave input{flex:1;min-width:0;background:transparent;border:1px solid var(--hair);color:var(--ink);font:inherit;padding:2px 4px}
 </style>
 <div class="app">
   <main class="stage" id="stage">
@@ -265,10 +275,10 @@ body{background:var(--page);overflow:hidden}
   </header>
   <div class="ctls">
     <button class="btn" id="pal" type="button">配色</button>
-    <button class="btn" id="theme" type="button">粒子</button>
   </div>
   <div class="palette" id="palette" hidden>
     <div class="ph"><span>COLORS · 配色</span><button id="palReset" type="button">跟随主题</button></div>
+    <div class="prow pchips"><span>配色</span><div class="pch" id="palChips"></div></div>
     <div class="prow"><span>背景</span><button class="sw" id="swBg" type="button"></button><b id="pvBg">—</b></div>
     <div class="prow"><span>文字</span><button class="sw" id="swInk" type="button"></button><b id="pvInk">—</b></div>
     <div class="pk" id="pk" hidden>
@@ -276,6 +286,7 @@ body{background:var(--page);overflow:hidden}
       <input type="range" id="pkH" min="0" max="360" step="1" value="210">
       <div class="hex"><input type="text" id="pkHex" maxlength="7" spellcheck="false" autocomplete="off"><button id="pkOk" type="button">收起</button></div>
     </div>
+    <div class="prow psave"><input id="palName" type="text" maxlength="12" placeholder="配色名称" spellcheck="false" autocomplete="off"><button id="palSave" type="button">保存</button></div>
     <div class="prow papply"><button id="palPush" type="button">确认应用到系统</button><span id="palState">未应用</span></div>
   </div>
     <canvas id="sc" aria-label="调度主视图：左侧连线汇聚到三个工作流节点，中间旋转环带滚动执行记录，右侧旋转谱线表示输出流"></canvas>
@@ -3592,9 +3603,13 @@ function readTheme(){
   T = {dark: isDark(), bg: g('--bg'), panel: g('--panel'), band: g('--band'), ink: g('--ink'), ink2: g('--ink2'), mute: g('--mute'),
        hair: g('--hair'), hair2: g('--hair2'), line: g('--c-line'), hi: g('--c-hi'), hot: g('--c-hot'), text: g('--c-text'), dim: g('--c-dim')};
   T.cell = T.dark ? T.ink2 : T.ink;
+  /* 发光只在深底 + 亮字时启用：深底配深字时改用实色描边，避免叠加混合把光斑叠成白色 */
+  const _l6 = s => { const h = (s || '').trim().replace('#', ''); return h.length === 6 ? [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)] : [0, 0, 0]; };
+  const _lu = s => { const v = _l6(s); return (0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]) / 255; };
+  T.lum = _lu(T.ink);
+  T.glow = T.dark && T.lum >= 0.55;
   const cur = root.dataset.theme || (darkMQ.matches ? 'dark' : 'light');
-  themeBtn.textContent = cur === 'light' ? '墨底' : cur === 'ink' ? '粒子' : '纸面';
-  themeBtn.setAttribute('aria-label', cur === 'light' ? '切换到墨底主题' : cur === 'ink' ? '切换到粒子主题' : '切换到纸面主题');
+  if (themeBtn) themeBtn.setAttribute('aria-label', cur === 'light' ? '纸面主题' : '粒子主题');
 }
 
 /* ================= 3. 模拟引擎（接真实数据时替换这一段） ================= */
@@ -3791,14 +3806,30 @@ function pkOpen(f){
   pkPaint();
 }
 if (cols && cols.bg) applyColors(cols);
-/* 配色落盘恢复：壁纸每次重载 WebView2 的 localStorage 可能被清空，改用 bridge 的 colors.json 兜底 */
-setTimeout(() => {
-  fetch('http://127.0.0.1:38765/colors').then(r => r.json()).then(c => {
-    if (!c) return;
-    if (c.bg && c.ink) { cols = { bg: c.bg, ink: c.ink }; applyColors(cols); pkPaint(); }
-    if (c.variant) root.dataset.theme = c.variant;
-  }).catch(() => {});
-}, 300);
+/* 配色落盘恢复：先读同步脚本 live/colors.js（不依赖 bridge 是否已启动），再向 bridge 轮询补一次 */
+let userPals = [];
+let gonePals = [];
+const FC = window.__DSH_COLORS__;
+if (FC && Array.isArray(FC.palettes)) userPals = FC.palettes.filter(p => p && p.name && p.bg && p.ink);
+if (FC && Array.isArray(FC.removed)) gonePals = FC.removed.filter(n => typeof n === "string");
+if (!FC && !userPals.length) {
+  try {
+    const s = JSON.parse(localStorage.getItem("agent-ops-palettes") || "[]"); if (Array.isArray(s)) userPals = s;
+    const g = JSON.parse(localStorage.getItem("agent-ops-removed") || "[]"); if (Array.isArray(g)) gonePals = g.filter(n => typeof n === "string");
+  } catch (e) {}
+}
+if (FC && FC.bg && FC.ink) { cols = { bg: FC.bg, ink: FC.ink }; applyColors(cols); }
+if (FC && FC.variant) { root.dataset.theme = FC.variant; try { localStorage.setItem('agent-ops-variant', FC.variant); } catch (e) {} }
+if (!cols || !cols.bg) {
+  let pulls = 0;
+  const pullColors = () => {
+    fetch('http://127.0.0.1:38765/colors').then(r => r.json()).then(c => {
+      if (c && c.bg && c.ink) { cols = { bg: c.bg, ink: c.ink }; applyColors(cols); pkPaint(); }
+      if (c && c.variant) { root.dataset.theme = c.variant; try { localStorage.setItem('agent-ops-variant', c.variant); } catch (e) {} }
+    }).catch(() => { if (++pulls < 10) setTimeout(pullColors, 3000); });
+  };
+  setTimeout(pullColors, 600);
+}
 [['swBg','bg'],['swInk','ink']].forEach(([sw, f]) => {
   const b = $('#' + sw);
   if (b) b.addEventListener('click', () => {
@@ -3827,15 +3858,100 @@ if (pkHex) pkHex.addEventListener('change', () => {
 });
 const pkOk = $('#pkOk');
 if (pkOk) pkOk.addEventListener('click', () => { pk.hidden = true; });
-if (palBtn) palBtn.addEventListener('click', () => { palBox.hidden = !palBox.hidden; if (!palBox.hidden) syncColors(); });
+const palChips = $('#palChips'), palName = $('#palName'), palSave = $('#palSave');
+const PRESETS = [
+  { name: '粒子', bg: '#030605', ink: '#C3F8E2' },
+  { name: '纸面', bg: '#EEEDE8', ink: '#151515' }
+];
+function palAll(){ return PRESETS.filter(p => gonePals.indexOf(p.name) < 0).concat(userPals); }
+function palCur(){
+  const cs = getComputedStyle(root);
+  return { bg: hxOf(cs.getPropertyValue('--bg')).toUpperCase(), ink: hxOf(cs.getPropertyValue('--ink')).toUpperCase() };
+}
+function lumOf(hex){
+  const p = hxOf(hex).slice(1);
+  const r = parseInt(p.substr(0, 2), 16), g = parseInt(p.substr(2, 2), 16), b = parseInt(p.substr(4, 2), 16);
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+function renderPalChips(){
+  if (!palChips) return;
+  const c = palCur();
+  palChips.innerHTML = '';
+  palAll().forEach(p => {
+    const wrap = document.createElement('span');
+    wrap.className = 'pchip';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch';
+    b.title = p.name + ' · ' + p.bg + ' / ' + p.ink;
+    b.setAttribute('aria-pressed', String(p.bg.toUpperCase() === c.bg && p.ink.toUpperCase() === c.ink));
+    b.style.setProperty('--cb', p.bg);
+    b.style.setProperty('--ci', p.ink);
+    b.addEventListener('click', () => usePalette(p));
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'pdel';
+    del.textContent = '×';
+    del.title = '删除「' + p.name + '」';
+    del.setAttribute('aria-label', '删除「' + p.name + '」');
+    del.addEventListener('click', e => { e.stopPropagation(); deletePalette(p); });
+    wrap.appendChild(b);
+    wrap.appendChild(del);
+    palChips.appendChild(wrap);
+  });
+}
+function usePalette(p){
+  cols = { bg: p.bg, ink: p.ink };
+  root.dataset.theme = lumOf(p.bg) > 0.5 ? 'light' : 'dark';
+  applyColors(cols);
+  pk.hidden = true;
+  commitColors();
+  renderPalChips();
+  if (palState) palState.textContent = '预览中';
+}
+function savePalettes(){
+  try { localStorage.setItem('agent-ops-palettes', JSON.stringify(userPals)); localStorage.setItem('agent-ops-removed', JSON.stringify(gonePals)); } catch (e) {}
+  fetch('http://127.0.0.1:38765/palettes', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ palettes: userPals, removed: gonePals }) }).catch(() => {});
+}
+function loadPalettes(){
+  fetch('http://127.0.0.1:38765/palettes').then(r => r.json()).then(o => {
+    const list = Array.isArray(o) ? o : (o && o.palettes) || [];
+    if (Array.isArray(list)) userPals = list.filter(p => p && p.name && p.bg && p.ink);
+    if (o && Array.isArray(o.removed)) gonePals = o.removed.filter(n => typeof n === "string");
+    renderPalChips();
+  }).catch(() => { renderPalChips(); });
+}
+if (palBtn) palBtn.addEventListener('click', () => { palBox.hidden = !palBox.hidden; if (!palBox.hidden) { syncColors(); renderPalChips(); loadPalettes(); } });
+if (palSave) palSave.addEventListener('click', () => {
+  const c = palCur();
+  const nm = ((palName && palName.value.trim()) || ('配色 ' + (userPals.length + 1))).slice(0, 12);
+  userPals = userPals.filter(x => x.name !== nm);
+  userPals.push({ name: nm, bg: c.bg, ink: c.ink });
+  if (userPals.length > 100) userPals = userPals.slice(-100);
+  if (palName) palName.value = '';
+  savePalettes();
+  renderPalChips();
+  if (palState) palState.textContent = '已保存';
+});
+renderPalChips();
+loadPalettes();
+/* 悬停色块右上角 × 删除：内置预设也能删，删除名单随 palettes 一起落盘 */
+function deletePalette(p){
+  if (PRESETS.indexOf(p) >= 0) { if (gonePals.indexOf(p.name) < 0) gonePals.push(p.name); }
+  else userPals = userPals.filter(x => x !== p);
+  savePalettes();
+  renderPalChips();
+  if (palState) palState.textContent = '已删除 · ' + p.name;
+}
 const palPush = $('#palPush'), palState = $('#palState');
 if (palPush) palPush.addEventListener('click', async () => {
   const cs = getComputedStyle(root);
   const bg = hxOf(cs.getPropertyValue('--bg')).toUpperCase();
   const ink = hxOf(cs.getPropertyValue('--ink')).toUpperCase();
+  const variant = root.dataset.theme || 'dark';
   if (palState) palState.textContent = '应用中…';
   try {
-    const r = await fetch('http://127.0.0.1:38765/theme', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ bg, ink }) });
+    const r = await fetch('http://127.0.0.1:38765/theme', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ bg, ink, variant }) });
     const j = await r.json();
     if (palState) palState.textContent = (j && j.ok) ? '已应用' : '失败';
   } catch (e) {
@@ -4156,7 +4272,7 @@ function drawWheelStreaks(c, t, dt){
   c.lineCap = 'butt'; c.strokeStyle = T.line; c.lineWidth = 0.7;
   const A = T.dark ? 1.3 : 1;
   base.forEach((p, i) => { c.globalAlpha = Math.min(0.9, BA[i] * A); c.stroke(p); });
-  if (T.dark) {
+  if (T.glow) {
     c.globalCompositeOperation = 'lighter';
     c.strokeStyle = T.hot; c.globalAlpha = 0.1; c.lineWidth = 4.5; c.stroke(hotP);
     c.globalAlpha = 0.6; c.lineWidth = 0.9; c.stroke(hotP);
@@ -4182,7 +4298,7 @@ function drawPulses(c, dt){
     for (let k = 0; k <= 6; k++) { const [x, y] = bez(m.q, u0 + (m.u - u0) * k / 6); k ? p.lineTo(x, y) : p.moveTo(x, y); }
   }
   c.lineCap = 'round';
-  if (T.dark) { c.globalCompositeOperation = 'lighter'; c.strokeStyle = T.hi; c.globalAlpha = 0.12; c.lineWidth = 4.5; c.stroke(p); c.globalAlpha = 0.9; c.lineWidth = 1.4; c.stroke(p); c.globalCompositeOperation = 'source-over'; }
+  if (T.glow) { c.globalCompositeOperation = 'lighter'; c.strokeStyle = T.hi; c.globalAlpha = 0.12; c.lineWidth = 4.5; c.stroke(p); c.globalAlpha = 0.9; c.lineWidth = 1.4; c.stroke(p); c.globalCompositeOperation = 'source-over'; }
   else { c.strokeStyle = T.line; c.globalAlpha = 0.8; c.lineWidth = 1.35; c.stroke(p); }
   c.globalAlpha = 1;
 }
@@ -4200,19 +4316,19 @@ function drawHubMarks(c, t){
 function drawBeam(c, t){
   const {cx, cy, R1} = G, a = wrapPI(t * 0.85), w = 0.24, tv = visAng(R1, 40);
   if (a < -tv || a - w > tv) return;
-  const far = W * 2, col = T.dark ? T.hot : T.line;
+  const far = W * 2, col = T.glow ? T.hot : T.line;
   c.save();
   c.beginPath(); c.moveTo(cx + Math.cos(a - w) * R1, cy + Math.sin(a - w) * R1);
   c.arc(cx, cy, far, a - w, a); c.arc(cx, cy, R1, a, a - w, true); c.closePath();
   if (c.createConicGradient) {
     const g = c.createConicGradient(a - w, cx, cy), f = w / TAU;
-    g.addColorStop(0, rgba(col, 0)); g.addColorStop(f * 0.97, rgba(col, T.dark ? 0.2 : 0.07)); g.addColorStop(f, rgba(col, 0)); g.addColorStop(1, rgba(col, 0));
+    g.addColorStop(0, rgba(col, 0)); g.addColorStop(f * 0.97, rgba(col, T.glow ? 0.2 : 0.07)); g.addColorStop(f, rgba(col, 0)); g.addColorStop(1, rgba(col, 0));
     c.fillStyle = g;
-  } else { c.fillStyle = rgba(col, T.dark ? 0.08 : 0.03); }
-  if (T.dark) c.globalCompositeOperation = 'lighter';
+  } else { c.fillStyle = rgba(col, T.glow ? 0.08 : 0.03); }
+  if (T.glow) c.globalCompositeOperation = 'lighter';
   c.fill();
   c.beginPath(); c.moveTo(cx + Math.cos(a) * R1, cy + Math.sin(a) * R1); c.lineTo(cx + Math.cos(a) * far, cy + Math.sin(a) * far);
-  c.strokeStyle = col; c.globalAlpha = T.dark ? 0.55 : 0.35; c.lineWidth = 1; c.stroke();
+  c.strokeStyle = col; c.globalAlpha = T.glow ? 0.55 : 0.35; c.lineWidth = 1; c.stroke();
   c.restore();
 }
 
@@ -4232,7 +4348,7 @@ function drawGears(c, t){
     if (((k % 9) + 9) % 9 > 5) continue;
     const a = k * si + roi; q.moveTo(cx + Math.cos(a) * ri, cy + Math.sin(a) * ri); q.arc(cx, cy, ri, a, a + si * 0.55);
   }
-  if (T.dark) {
+  if (T.glow) {
     c.globalCompositeOperation = 'lighter';
     c.fillStyle = T.hot; c.globalAlpha = 0.85; c.fill(p);
     c.strokeStyle = T.hot; c.globalAlpha = 0.18; c.lineWidth = 6; c.stroke(p);
@@ -4284,7 +4400,7 @@ function drawHubLabels(c, t){
     c.fillStyle = T.dim; c.fillText(sub, x, y + fs * 1.45);
     if (e >= 0 && e < 0.7) {
       const k = e / 0.7;
-      c.strokeStyle = T.dark ? T.hot : T.line; c.globalAlpha = 1 - k; c.lineWidth = 1.4;
+      c.strokeStyle = T.glow ? T.hot : T.line; c.globalAlpha = 1 - k; c.lineWidth = 1.4;
       c.beginPath(); c.arc(h.x - 6, h.y, 10 + k * 70, 0, TAU); c.stroke(); c.globalAlpha = 1;
     }
   });
@@ -4396,14 +4512,7 @@ if (fullBtn) fullBtn.addEventListener('click', () => {
   } catch (e) { /* 部分窗口不允许全屏 */ }
 });
 document.addEventListener('fullscreenchange', () => { if (fullBtn) fullBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏'; });
-themeBtn.addEventListener('click', () => {
-  const cur = root.dataset.theme || (darkMQ.matches ? 'dark' : 'light');
-  const next = cur === 'dark' ? 'light' : cur === 'light' ? 'ink' : 'dark';
-  root.dataset.theme = next;
-  try { localStorage.setItem('agent-ops-variant', next); } catch (e) {}
-  saveColorsFile();
-  if (!cols) setTimeout(syncColors, 0);
-});
+
 function onTheme(){ readTheme(); stageDirty = true; panelsNeed = true; }
 new MutationObserver(onTheme).observe(root, {attributes: true, attributeFilter: ['data-theme']});
 darkMQ.addEventListener('change', onTheme);
